@@ -623,12 +623,14 @@ function renderTodos() {
     sortedTodos.forEach((todo, index) => {
         todosHTML += `
             <div class="todo-item ${todo.completed ? 'completed' : ''}" data-id="${todo.id}">
-                <div class="todo-header">
-                    <input type="checkbox" class="todo-checkbox" ${todo.completed ? 'checked' : ''}>
-                    <div class="todo-title">${todo.title}</div>
-                    <div class="todo-priority ${todo.priority}">${getPriorityText(todo.priority)}</div>
+                <div class="todo-content">
+                    <div class="todo-header">
+                        <input type="checkbox" class="todo-checkbox" ${todo.completed ? 'checked' : ''}>
+                        <div class="todo-title">${todo.title}</div>
+                        <div class="todo-priority ${todo.priority}" title="点击切换优先级">${getPriorityText(todo.priority)}</div>
+                    </div>
+                    ${todo.description ? `<div class="todo-description">${todo.description}</div>` : ''}
                 </div>
-                ${todo.description ? `<div class="todo-description">${todo.description}</div>` : ''}
                 <div class="todo-actions">
                     <button class="todo-action-btn delete-todo-btn" title="删除">🗑️</button>
                 </div>
@@ -660,6 +662,26 @@ function toggleTodoComplete(todoId) {
     }
 }
 
+function toggleTodoPriority(todoId) {
+    const todoIndex = todos.findIndex(todo => todo.id === todoId);
+    if (todoIndex !== -1) {
+        const currentPriority = todos[todoIndex].priority;
+        const priorityOrder = ['low', 'medium', 'high'];
+        const currentIndex = priorityOrder.indexOf(currentPriority);
+        const nextIndex = (currentIndex + 1) % priorityOrder.length;
+        const newPriority = priorityOrder[nextIndex];
+        todos[todoIndex].priority = newPriority;
+        saveTodos();
+        
+        // 立即更新当前元素的显示
+        const priorityElement = document.querySelector(`[data-id="${todoId}"] .todo-priority`);
+        if (priorityElement) {
+            priorityElement.className = `todo-priority ${newPriority}`;
+            priorityElement.textContent = getPriorityText(newPriority);
+        }
+    }
+}
+
 function bindTodoEvents() {
     // 绑定复选框事件
     const checkboxes = todoListEl.querySelectorAll('.todo-checkbox');
@@ -668,6 +690,17 @@ function bindTodoEvents() {
             const todoItem = this.closest('.todo-item');
             const todoId = parseInt(todoItem.dataset.id);
             toggleTodoComplete(todoId);
+        });
+    });
+    
+    // 绑定优先级点击事件
+    const priorityElements = todoListEl.querySelectorAll('.todo-priority');
+    priorityElements.forEach(priorityEl => {
+        priorityEl.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const todoItem = this.closest('.todo-item');
+            const todoId = parseInt(todoItem.dataset.id);
+            toggleTodoPriority(todoId);
         });
     });
     

@@ -502,6 +502,9 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.2);
     transition: all 0.3s ease;
     position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
 }
 
 .todo-item:hover {
@@ -544,6 +547,14 @@ body {
     font-size: 0.7rem;
     font-weight: bold;
     text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.todo-priority:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .todo-priority.high {
@@ -561,6 +572,11 @@ body {
     color: white;
 }
 
+.todo-content {
+    flex: 1;
+    min-width: 0;
+}
+
 .todo-description {
     font-size: 0.8rem;
     opacity: 0.8;
@@ -570,15 +586,9 @@ body {
 }
 
 .todo-actions {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    display: none;
-    gap: 5px;
-}
-
-.todo-item:hover .todo-actions {
     display: flex;
+    gap: 5px;
+    flex-shrink: 0;
 }
 
 .todo-action-btn {
