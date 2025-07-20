@@ -15,10 +15,19 @@ body {
 
 /* 顶部时间栏 */
 .top-bar {
-    text-align: center;
-    padding: 20px 0;
+    display: flex;
+    justify-content: center; /* 居中 */
+    align-items: center;
+    padding: 20px;
     color: white;
 }
+
+.time-display {
+    text-align: center;
+    width: 100%;
+}
+
+
 
 .current-time {
     font-size: 3rem;
@@ -125,48 +134,7 @@ body {
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
 }
 
-/* 小部件拖拽手柄样式 */
-.widget-drag-handle {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    color: #666;
-    font-size: 0.8rem;
-    cursor: grab;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    z-index: 10;
-    background: rgba(255, 255, 255, 0.8);
-    border-radius: 4px;
-    padding: 2px 4px;
-}
 
-.widget:hover .widget-drag-handle {
-    opacity: 1;
-}
-
-.widget-drag-handle:active {
-    cursor: grabbing;
-}
-
-/* 小部件拖拽状态样式 */
-.widget.dragging {
-    opacity: 0.7;
-    transform: rotate(2deg);
-    z-index: 1000;
-    cursor: grabbing;
-}
-
-.widget.drag-over {
-    border: 2px dashed #0078d7;
-    background: rgba(0, 120, 215, 0.05);
-    transform: scale(1.02);
-}
-
-/* 小部件拖拽时的容器样式 */
-.main-content.dragging {
-    cursor: grabbing;
-}
 
 
 
@@ -177,10 +145,9 @@ body {
 }
 
 .widget-header {
-    position: relative;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     padding: 15px 20px;
     background: rgba(255, 255, 255, 0.9);
     border-bottom: 1px solid rgba(0, 0, 0, 0.1);
@@ -666,6 +633,60 @@ body {
     color: white;
 }
 
+.cards-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.settings-btn {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.settings-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+}
+
+.edit-mode-btn {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.edit-mode-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+}
+
+.edit-mode-btn.active {
+    background: rgba(40, 167, 69, 0.3);
+    border-color: rgba(40, 167, 69, 0.5);
+    color: #28a745;
+}
+
 .cards-header h3 {
     font-size: 1.5rem;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
@@ -738,7 +759,7 @@ body {
     gap: 5px;
 }
 
-.card:hover .card-actions {
+.edit-mode .card-actions {
     display: flex;
 }
 
@@ -772,6 +793,10 @@ body {
 }
 
 .card:hover .card-drag-handle {
+    opacity: 0;
+}
+
+.edit-mode .card-drag-handle {
     opacity: 1;
 }
 
@@ -781,16 +806,28 @@ body {
 
 /* 拖拽状态样式 */
 .card.dragging {
-    opacity: 0.5;
-    transform: rotate(5deg);
+    opacity: 0.8;
+    transform: rotate(2deg) scale(1.05);
     z-index: 1000;
     cursor: grabbing;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
 }
 
 .card.drag-over {
     border: 2px dashed #0078d7;
     background: rgba(0, 120, 215, 0.1);
-    transform: scale(1.05);
+    transform: scale(1.02);
+    transition: all 0.2s ease;
+    box-shadow: 0 0 15px rgba(0, 120, 215, 0.3);
+}
+
+/* 拖拽到边缘时的视觉反馈 */
+.cards-container.drag-to-start::before {
+    background: linear-gradient(to right, rgba(0, 120, 215, 0.3), transparent);
+}
+
+.cards-container.drag-to-end::after {
+    background: linear-gradient(to left, rgba(0, 120, 215, 0.3), transparent);
 }
 
 /* 拖拽时的容器样式 */
@@ -1002,4 +1039,192 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
+}
+
+/* 设置模态框样式 */
+.settings-section {
+    margin-bottom: 25px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.settings-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.settings-section h4 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.data-management-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+
+
+/* 小部件开关样式 */
+.widget-toggle-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.widget-toggle-item {
+    display: flex;
+    align-items: center;
+}
+
+.toggle-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    gap: 12px;
+}
+
+.toggle-label input[type="checkbox"] {
+    display: none;
+}
+
+.toggle-slider {
+    position: relative;
+    width: 50px;
+    height: 24px;
+    background-color: #ccc;
+    border-radius: 12px;
+    transition: background-color 0.3s ease;
+}
+
+.toggle-slider:before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    background-color: white;
+    border-radius: 50%;
+    transition: transform 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-label input[type="checkbox"]:checked + .toggle-slider {
+    background-color: #0078d7;
+}
+
+.toggle-label input[type="checkbox"]:checked + .toggle-slider:before {
+    transform: translateX(26px);
+}
+
+.toggle-text {
+    font-size: 1rem;
+    color: #333;
+    font-weight: 500;
+}
+
+/* 小部件排序样式 */
+.widget-order-container {
+    margin-top: 10px;
+}
+
+.order-hint {
+    margin: 0 0 15px 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.widget-order-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.widget-order-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    cursor: grab;
+    transition: all 0.3s ease;
+    user-select: none;
+}
+
+.widget-order-item:hover {
+    background: #e9ecef;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.widget-order-item:active {
+    cursor: grabbing;
+}
+
+.widget-order-item.dragging {
+    opacity: 0.7;
+    transform: rotate(2deg);
+    z-index: 1000;
+}
+
+.widget-order-item.drag-over {
+    border: 2px dashed #0078d7;
+    background: rgba(0, 120, 215, 0.05);
+}
+
+.widget-order-handle {
+    margin-right: 12px;
+    color: #666;
+    font-size: 1.2rem;
+    cursor: grab;
+}
+
+.widget-order-item:active .widget-order-handle {
+    cursor: grabbing;
+}
+
+.widget-order-text {
+    flex: 1;
+    font-size: 1rem;
+    color: #333;
+    font-weight: 500;
+}
+
+.widget-order-toggle {
+    margin-left: 12px;
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    opacity: 0.7;
+}
+
+.widget-order-toggle:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.widget-order-toggle.visible {
+    color: #28a745;
+}
+
+.widget-order-toggle.hidden {
+    color: #6c757d;
+} 
+
+/* 移除边缘拖拽提示色块相关样式 */
+.cards-container::before,
+.cards-container::after,
+.cards-container.drag-to-start::before,
+.cards-container.drag-to-end::after {
+    display: none !important;
 } 

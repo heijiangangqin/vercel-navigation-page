@@ -32,7 +32,11 @@
     <div class="cards-section">
         <div class="cards-header">
             <h3>我的应用</h3>
-            <button class="add-card-btn" id="add-card-btn">+ 添加卡片</button>
+            <div class="cards-actions">
+                <button class="edit-mode-btn" id="edit-mode-btn" title="编辑模式">✏️</button>
+                <button class="add-card-btn" id="add-card-btn">+ 添加卡片</button>
+                <button class="settings-btn" id="settings-btn" title="设置">⚙️</button>
+            </div>
         </div>
         <div class="cards-container" id="cards-container">
             <!-- 卡片将通过JavaScript动态生成 -->
@@ -43,11 +47,9 @@
     <div class="widgets-section">
         <div class="widgets-container" id="main-content">
             <!-- 天气小部件 -->
-            <div class="widget weather-widget" draggable="true" data-widget-type="weather">
+            <div class="widget weather-widget" data-widget-type="weather">
                 <div class="widget-header">
-                    <div class="widget-drag-handle" title="拖拽排序">⋮⋮</div>
                     <h3>🌤️ 天气</h3>
-                    <button class="widget-config-btn" id="weather-config-btn" title="配置">⚙️</button>
                 </div>
                 <div class="widget-content">
                     <div class="weather-content" id="weather-content">
@@ -57,9 +59,8 @@
             </div>
 
             <!-- 日历小部件 -->
-            <div class="widget calendar-widget" draggable="true" data-widget-type="calendar">
+            <div class="widget calendar-widget" data-widget-type="calendar">
                 <div class="widget-header">
-                    <div class="widget-drag-handle" title="拖拽排序">⋮⋮</div>
                     <h3>日历</h3>
                 </div>
                 <div class="widget-content">
@@ -79,9 +80,8 @@
             </div>
 
             <!-- 记事本小部件 -->
-            <div class="widget notepad-widget" draggable="true" data-widget-type="notepad">
+            <div class="widget notepad-widget" data-widget-type="notepad">
                 <div class="widget-header">
-                    <div class="widget-drag-handle" title="拖拽排序">⋮⋮</div>
                     <h3>📝 记事本</h3>
                 </div>
                 <div class="widget-content">
@@ -90,9 +90,8 @@
             </div>
 
             <!-- 待办事项小部件 -->
-            <div class="widget todo-widget" draggable="true" data-widget-type="todo">
+            <div class="widget todo-widget" data-widget-type="todo">
                 <div class="widget-header">
-                    <div class="widget-drag-handle" title="拖拽排序">⋮⋮</div>
                     <h3>待办事项</h3>
                 </div>
                 <div class="widget-content">
@@ -201,6 +200,48 @@
         </div>
     </div>
 
+    <!-- 设置模态框 -->
+    <div class="modal" id="settings-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚙️ 设置</h3>
+                <button class="close-btn" id="close-settings-modal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <h4>🌤️ 天气设置</h4>
+                    <button class="btn btn-secondary" id="open-weather-config-btn">配置天气</button>
+                </div>
+                
+                <div class="settings-section">
+                    <h4>📋 小部件管理</h4>
+                    <div class="widget-order-container">
+                        <p class="order-hint">拖拽调整顺序，点击眼睛图标控制显示：</p>
+                        <div class="widget-order-list" id="widget-order-list">
+                            <!-- 小部件排序列表将通过JavaScript动态生成 -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h4>💾 数据管理</h4>
+                    <div class="data-management-buttons">
+                        <button class="btn btn-primary" id="export-data-btn">📤 导出数据</button>
+                        <input type="file" id="import-data-input" accept=".json" style="display: none;">
+                        <button class="btn btn-secondary" id="import-data-btn">📥 导入数据</button>
+                        <button class="btn btn-danger" id="clear-data-btn">🗑️ 清空数据</button>
+                    </div>
+                </div>
+                
+
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="close-settings-btn">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="data-manager.js"></script>
     <script src="script.js"></script>
 </body>
 </html> 

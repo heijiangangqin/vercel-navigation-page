@@ -5,8 +5,6 @@ let todos = [];
 let editingTodoIndex = -1;
 let draggedCardIndex = -1;
 let draggedCardElement = null;
-let draggedWidgetIndex = -1;
-let draggedWidgetElement = null;
 const STORAGE_KEY = 'homepage_cards';
 const NOTEPAD_KEY = 'homepage_notepad';
 const TODO_KEY = 'homepage_todos';
@@ -28,7 +26,10 @@ const addTodoBtn = document.getElementById('add-todo-btn');
 const mainContentEl = document.getElementById('main-content');
 
 // 初始化
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+    // 初始化数据管理器
+    await dataManager.initialize();
+    
     initializeTime();
     initializeCalendar();
     initializeWeather();
@@ -37,11 +38,18 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeTodos();
     initializeSearch();
     initializeModals();
-    loadWidgetOrder();
-    initializeWidgetDrag();
     
     // 每秒更新时间
     setInterval(updateTime, 1000);
+    
+    // 初始化设置功能
+    initializeSettings();
+    
+    // 初始化小部件管理功能（在DOM加载完成后）
+    initializeWidgetManagement();
+    
+    // 初始化编辑模式功能
+    initializeEditMode();
 });
 
 // 时间相关功能
@@ -146,24 +154,17 @@ function generateCalendar() {
 
 // 天气配置管理
 let weatherConfig = {
-    apiKey: 'e17e123123123123123',
+    apiKey: 'e17ef733a4009a25e9e13d8d152bb6e7',
     cityCode: '445281',
     cityName: '普宁市'
 };
 
 function loadWeatherConfig() {
-    const savedConfig = localStorage.getItem(WEATHER_CONFIG_KEY);
-    if (savedConfig) {
-        try {
-            weatherConfig = { ...weatherConfig, ...JSON.parse(savedConfig) };
-        } catch (error) {
-            console.error('加载天气配置失败:', error);
-        }
-    }
+    weatherConfig = dataManager.getWeatherConfig();
 }
 
 function saveWeatherConfig() {
-    localStorage.setItem(WEATHER_CONFIG_KEY, JSON.stringify(weatherConfig));
+    dataManager.setWeatherConfig(weatherConfig);
 }
 
 // 天气功能
@@ -264,10 +265,8 @@ function initializeCards() {
 }
 
 function loadCards() {
-    const savedCards = localStorage.getItem(STORAGE_KEY);
-    if (savedCards) {
-        cards = JSON.parse(savedCards);
-    } else {
+    cards = dataManager.getCards();
+    if (cards.length === 0) {
         // 默认卡片
         cards = [
             { name: 'GitHub', url: 'https://github.com', icon: 'https://github.githubassets.com/favicons/favicon.svg' },
@@ -280,7 +279,7 @@ function loadCards() {
 }
 
 function saveCards() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
+    dataManager.setCards(cards);
 }
 
 function renderCards() {
@@ -297,10 +296,12 @@ function renderCards() {
         return;
     }
     
+    const isEditMode = document.querySelector('.cards-section').classList.contains('edit-mode');
+    
     cards.forEach((card, index) => {
         const cardEl = document.createElement('div');
         cardEl.className = 'card';
-        cardEl.draggable = true;
+        cardEl.draggable = isEditMode;
         cardEl.dataset.index = index;
         cardEl.innerHTML = `
             <div class="card-actions">
@@ -313,9 +314,9 @@ function renderCards() {
             <div class="card-name">${card.name}</div>
         `;
         
-        // 点击卡片打开链接
+        // 点击卡片打开链接（仅在非编辑模式下）
         cardEl.addEventListener('click', function(e) {
-            if (!e.target.classList.contains('action-btn')) {
+            if (!e.target.classList.contains('action-btn') && !document.querySelector('.cards-section').classList.contains('edit-mode')) {
                 window.open(card.url, '_blank');
             }
         });
@@ -338,152 +339,59 @@ function renderCards() {
             }
         });
         
-        // 拖拽事件
-        cardEl.addEventListener('dragstart', handleDragStart);
-        cardEl.addEventListener('dragend', handleDragEnd);
-        cardEl.addEventListener('dragover', handleDragOver);
-        cardEl.addEventListener('drop', handleDrop);
-        cardEl.addEventListener('dragenter', handleDragEnter);
-        cardEl.addEventListener('dragleave', handleDragLeave);
+
         
         cardsContainerEl.appendChild(cardEl);
     });
 }
 
-// 小部件拖拽功能
-function initializeWidgetDrag() {
-    const widgets = document.querySelectorAll('.widget');
-    widgets.forEach((widget, index) => {
-        widget.dataset.index = index;
-        
-        // 绑定拖拽事件
-        widget.addEventListener('dragstart', handleWidgetDragStart);
-        widget.addEventListener('dragend', handleWidgetDragEnd);
-        widget.addEventListener('dragover', handleWidgetDragOver);
-        widget.addEventListener('drop', handleWidgetDrop);
-        widget.addEventListener('dragenter', handleWidgetDragEnter);
-        widget.addEventListener('dragleave', handleWidgetDragLeave);
-    });
-}
 
-function handleWidgetDragStart(e) {
-    // 如果点击的是输入框或按钮，不启动拖拽
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.tagName === 'TEXTAREA') {
-        e.preventDefault();
-        return;
-    }
-    
-    draggedWidgetIndex = parseInt(e.target.closest('.widget').dataset.index);
-    draggedWidgetElement = e.target.closest('.widget');
-    draggedWidgetElement.classList.add('dragging');
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/html', draggedWidgetElement.outerHTML);
-    mainContentEl.classList.add('dragging');
-    console.log('开始拖拽小部件:', draggedWidgetIndex);
-}
-
-function handleWidgetDragEnd(e) {
-    e.target.classList.remove('dragging');
-    draggedWidgetIndex = -1;
-    draggedWidgetElement = null;
-    mainContentEl.classList.remove('dragging');
-    
-    // 移除所有拖拽相关的样式
-    const widgets = document.querySelectorAll('.widget');
-    widgets.forEach(widget => {
-        widget.classList.remove('drag-over');
-    });
-    console.log('结束拖拽小部件');
-}
-
-function handleWidgetDragOver(e) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-}
-
-function handleWidgetDrop(e) {
-    e.preventDefault();
-    const targetWidget = e.target.closest('.widget');
-    if (!targetWidget || targetWidget === draggedWidgetElement) return;
-    
-    const targetIndex = parseInt(targetWidget.dataset.index);
-    if (draggedWidgetIndex === -1 || targetIndex === draggedWidgetIndex) return;
-    
-    console.log('小部件拖拽排序:', draggedWidgetIndex, '->', targetIndex);
-    
-    // 重新排序小部件
-    const widgets = Array.from(document.querySelectorAll('.widget'));
-    const draggedWidget = widgets[draggedWidgetIndex];
-    
-    // 从DOM中移除拖拽的小部件
-    draggedWidget.remove();
-    
-    // 插入到目标位置
-    if (targetIndex > draggedWidgetIndex) {
-        targetWidget.parentNode.insertBefore(draggedWidget, targetWidget.nextSibling);
-    } else {
-        targetWidget.parentNode.insertBefore(draggedWidget, targetWidget);
-    }
-    
-    // 重新绑定事件和更新索引
-    initializeWidgetDrag();
-    
-    // 保存小部件顺序
-    saveWidgetOrder();
-}
-
-function handleWidgetDragEnter(e) {
-    const targetWidget = e.target.closest('.widget');
-    if (targetWidget && targetWidget !== draggedWidgetElement) {
-        targetWidget.classList.add('drag-over');
-    }
-}
-
-function handleWidgetDragLeave(e) {
-    const targetWidget = e.target.closest('.widget');
-    if (targetWidget) {
-        targetWidget.classList.remove('drag-over');
-    }
-}
 
 function saveWidgetOrder() {
     const widgets = document.querySelectorAll('.widget');
     const widgetOrder = Array.from(widgets).map(widget => widget.dataset.widgetType);
-    localStorage.setItem(WIDGET_ORDER_KEY, JSON.stringify(widgetOrder));
+    dataManager.setWidgetOrder(widgetOrder);
 }
 
 function loadWidgetOrder() {
-    const savedOrder = localStorage.getItem(WIDGET_ORDER_KEY);
-    if (savedOrder) {
-        try {
-            const widgetOrder = JSON.parse(savedOrder);
-            const widgets = document.querySelectorAll('.widget');
-            const widgetArray = Array.from(widgets);
-            
-            // 根据保存的顺序重新排列小部件
-            widgetOrder.forEach((widgetType, index) => {
-                const widget = widgetArray.find(w => w.dataset.widgetType === widgetType);
-                if (widget) {
-                    mainContentEl.appendChild(widget);
-                }
-            });
-        } catch (error) {
-            console.error('加载小部件顺序失败:', error);
-        }
+    const widgetOrder = dataManager.getWidgetOrder();
+    if (widgetOrder && widgetOrder.length > 0) {
+        const container = document.querySelector('.widgets-container');
+        if (!container) return;
+        
+        // 根据保存的顺序重新排列小部件
+        widgetOrder.forEach((widgetType) => {
+            const widget = container.querySelector(`[data-widget-type="${widgetType}"]`);
+            if (widget) {
+                container.appendChild(widget);
+            }
+        });
     }
 }
 
 // 卡片拖拽排序功能
 function handleDragStart(e) {
-    draggedCardIndex = parseInt(e.target.dataset.index);
-    draggedCardElement = e.target;
-    e.target.classList.add('dragging');
+    // 如果点击的是编辑或删除按钮，不启动拖拽
+    if (e.target.classList.contains('action-btn')) {
+        e.preventDefault();
+        return;
+    }
+    
+    draggedCardIndex = parseInt(e.target.closest('.card').dataset.index);
+    draggedCardElement = e.target.closest('.card');
+    draggedCardElement.classList.add('dragging');
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/html', e.target.outerHTML);
+    e.dataTransfer.setData('text/html', draggedCardElement.outerHTML);
+    
+    // 设置拖拽图像
+    const rect = draggedCardElement.getBoundingClientRect();
+    e.dataTransfer.setDragImage(draggedCardElement, rect.width / 2, rect.height / 2);
 }
 
 function handleDragEnd(e) {
-    e.target.classList.remove('dragging');
+    if (draggedCardElement) {
+        draggedCardElement.classList.remove('dragging');
+    }
     draggedCardIndex = -1;
     draggedCardElement = null;
     
@@ -492,20 +400,95 @@ function handleDragEnd(e) {
     cards.forEach(card => {
         card.classList.remove('drag-over');
     });
+    
+    // 移除容器边缘样式
+    const container = document.querySelector('.cards-container');
+    if (container) {
+        container.classList.remove('drag-to-start', 'drag-to-end');
+    }
 }
 
 function handleDragOver(e) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+    
+    const targetCard = e.target.closest('.card');
+    const container = e.target.closest('.cards-container');
+    
+    if (!container) return;
+    
+    // 移除所有拖拽悬停样式
+    const cards = document.querySelectorAll('.card');
+    cards.forEach(card => card.classList.remove('drag-over'));
+    
+    if (targetCard && targetCard !== draggedCardElement) {
+        // 拖拽到卡片上
+        targetCard.classList.add('drag-over');
+    } else if (!targetCard && draggedCardElement) {
+        // 拖拽到容器空白区域，判断是否拖拽到边缘
+        const rect = container.getBoundingClientRect();
+        const mouseX = e.clientX;
+        const mouseY = e.clientY;
+        
+        const cardsArray = Array.from(cards);
+        if (cardsArray.length === 0) return;
+        
+        // 边缘检测阈值
+        const edgeThreshold = 80;
+        
+        // 判断是否拖拽到容器边缘
+        if (mouseX < rect.left + edgeThreshold || mouseY < rect.top + edgeThreshold) {
+            // 拖拽到左上边缘，高亮第一个卡片
+            cardsArray[0].classList.add('drag-over');
+            container.classList.add('drag-to-start');
+            container.classList.remove('drag-to-end');
+        } else if (mouseX > rect.right - edgeThreshold || mouseY > rect.bottom - edgeThreshold) {
+            // 拖拽到右下边缘，高亮最后一个卡片
+            cardsArray[cardsArray.length - 1].classList.add('drag-over');
+            container.classList.add('drag-to-end');
+            container.classList.remove('drag-to-start');
+        } else {
+            // 不在边缘，移除边缘样式
+            container.classList.remove('drag-to-start', 'drag-to-end');
+        }
+    }
 }
 
 function handleDrop(e) {
     e.preventDefault();
     const targetCard = e.target.closest('.card');
-    if (!targetCard || targetCard === draggedCardElement) return;
+    const container = e.target.closest('.cards-container');
     
-    const targetIndex = parseInt(targetCard.dataset.index);
-    if (draggedCardIndex === -1 || targetIndex === draggedCardIndex) return;
+    if (!container || !draggedCardElement) return;
+    
+    let targetIndex = -1;
+    
+    if (targetCard && targetCard !== draggedCardElement) {
+        // 拖拽到卡片上
+        targetIndex = parseInt(targetCard.dataset.index);
+    } else if (!targetCard) {
+        // 拖拽到容器空白区域，判断是否拖拽到边缘
+        const rect = container.getBoundingClientRect();
+        const mouseX = e.clientX;
+        const mouseY = e.clientY;
+        
+        const cardsArray = Array.from(document.querySelectorAll('.card'));
+        if (cardsArray.length === 0) return;
+        
+        // 边缘检测阈值
+        const edgeThreshold = 80;
+        
+        // 判断是否拖拽到容器边缘
+        if (mouseX < rect.left + edgeThreshold || mouseY < rect.top + edgeThreshold) {
+            // 拖拽到左上边缘，插入到第一个位置
+            targetIndex = 0;
+        } else if (mouseX > rect.right - edgeThreshold || mouseY > rect.bottom - edgeThreshold) {
+            // 拖拽到右下边缘，插入到最后一个位置
+            targetIndex = cardsArray.length;
+        }
+    }
+    
+    if (draggedCardIndex === -1 || targetIndex === -1 || targetIndex === draggedCardIndex) return;
     
     // 重新排序卡片数组
     const draggedCard = cards[draggedCardIndex];
@@ -515,33 +498,84 @@ function handleDrop(e) {
     // 保存并重新渲染
     saveCards();
     renderCards();
+    
+    // 重新启用拖拽功能（因为重新渲染后需要重新绑定事件）
+    if (document.querySelector('.cards-section').classList.contains('edit-mode')) {
+        setTimeout(() => {
+            enableCardDrag();
+        }, 10);
+    }
 }
 
 function handleDragEnter(e) {
     const targetCard = e.target.closest('.card');
+    const container = e.target.closest('.cards-container');
+    
     if (targetCard && targetCard !== draggedCardElement) {
         targetCard.classList.add('drag-over');
+    } else if (!targetCard && container && draggedCardElement) {
+        // 进入容器空白区域，检查是否在边缘
+        const rect = container.getBoundingClientRect();
+        const mouseX = e.clientX;
+        const mouseY = e.clientY;
+        
+        const cardsArray = Array.from(document.querySelectorAll('.card'));
+        if (cardsArray.length === 0) return;
+        
+        const edgeThreshold = 80;
+        
+        if (mouseX < rect.left + edgeThreshold || mouseY < rect.top + edgeThreshold) {
+            cardsArray[0].classList.add('drag-over');
+            container.classList.add('drag-to-start');
+            container.classList.remove('drag-to-end');
+        } else if (mouseX > rect.right - edgeThreshold || mouseY > rect.bottom - edgeThreshold) {
+            cardsArray[cardsArray.length - 1].classList.add('drag-over');
+            container.classList.add('drag-to-end');
+            container.classList.remove('drag-to-start');
+        } else {
+            container.classList.remove('drag-to-start', 'drag-to-end');
+        }
     }
 }
 
 function handleDragLeave(e) {
     const targetCard = e.target.closest('.card');
+    const container = e.target.closest('.cards-container');
+    
     if (targetCard) {
-        targetCard.classList.remove('drag-over');
+        // 检查是否真的离开了卡片区域
+        const rect = targetCard.getBoundingClientRect();
+        const mouseX = e.clientX;
+        const mouseY = e.clientY;
+        
+        if (mouseX < rect.left || mouseX > rect.right || mouseY < rect.top || mouseY > rect.bottom) {
+            targetCard.classList.remove('drag-over');
+        }
+    } else if (container) {
+        // 检查是否真的离开了容器区域
+        const rect = container.getBoundingClientRect();
+        const mouseX = e.clientX;
+        const mouseY = e.clientY;
+        
+        if (mouseX < rect.left || mouseX > rect.right || mouseY < rect.top || mouseY > rect.bottom) {
+            // 移除所有拖拽悬停样式
+            const cards = document.querySelectorAll('.card');
+            cards.forEach(card => card.classList.remove('drag-over'));
+        }
     }
 }
 
 // 记事本功能
 function initializeNotepad() {
     // 加载保存的内容
-    const savedContent = localStorage.getItem(NOTEPAD_KEY);
+    const savedContent = dataManager.getNotepad();
     if (savedContent) {
         notepadContentEl.value = savedContent;
     }
     
     // 自动保存
     notepadContentEl.addEventListener('input', function() {
-        localStorage.setItem(NOTEPAD_KEY, this.value);
+        dataManager.setNotepad(this.value);
     });
 }
 
@@ -562,10 +596,8 @@ function initializeTodos() {
 }
 
 function loadTodos() {
-    const savedTodos = localStorage.getItem(TODO_KEY);
-    if (savedTodos) {
-        todos = JSON.parse(savedTodos);
-    } else {
+    todos = dataManager.getTodos();
+    if (todos.length === 0) {
         // 默认待办事项
         todos = [
             {
@@ -582,7 +614,7 @@ function loadTodos() {
 }
 
 function saveTodos() {
-    localStorage.setItem(TODO_KEY, JSON.stringify(todos));
+    dataManager.setTodos(todos);
 }
 
 function renderTodos() {
@@ -774,6 +806,7 @@ function initializeModals() {
     const cardModal = document.getElementById('card-modal');
     const editModal = document.getElementById('edit-modal');
     const weatherConfigModal = document.getElementById('weather-config-modal');
+    const settingsModal = document.getElementById('settings-modal');
     const closeModalBtns = document.querySelectorAll('.close-btn, .btn-secondary');
     
     // 打开添加卡片模态框
@@ -782,15 +815,7 @@ function initializeModals() {
         clearForm('card-modal');
     });
     
-    // 打开天气配置模态框
-    const weatherConfigBtn = document.getElementById('weather-config-btn');
-    weatherConfigBtn.addEventListener('click', function() {
-        // 填充当前配置
-        document.getElementById('weather-api-key').value = weatherConfig.apiKey;
-        document.getElementById('weather-city-code').value = weatherConfig.cityCode;
-        document.getElementById('weather-city-name').value = weatherConfig.cityName;
-        weatherConfigModal.style.display = 'flex';
-    });
+
     
     // 关闭模态框
     closeModalBtns.forEach(btn => {
@@ -798,6 +823,7 @@ function initializeModals() {
             cardModal.style.display = 'none';
             editModal.style.display = 'none';
             weatherConfigModal.style.display = 'none';
+            settingsModal.style.display = 'none';
         });
     });
     
@@ -811,6 +837,9 @@ function initializeModals() {
         }
         if (e.target === weatherConfigModal) {
             weatherConfigModal.style.display = 'none';
+        }
+        if (e.target === settingsModal) {
+            settingsModal.style.display = 'none';
         }
     });
     
@@ -998,6 +1027,420 @@ function importCards(file) {
     reader.readAsText(file);
 }
 
+// 设置功能
+function initializeSettings() {
+    const settingsBtn = document.getElementById('settings-btn');
+    const settingsModal = document.getElementById('settings-modal');
+    const exportBtn = document.getElementById('export-data-btn');
+    const importBtn = document.getElementById('import-data-btn');
+    const importInput = document.getElementById('import-data-input');
+    const openWeatherConfigBtn = document.getElementById('open-weather-config-btn');
+    const clearDataBtn = document.getElementById('clear-data-btn');
+    
+    // 打开设置模态框
+    settingsBtn.addEventListener('click', function() {
+        settingsModal.style.display = 'flex';
+        // 重新渲染小部件管理列表
+        renderWidgetOrderList();
+        bindWidgetOrderEvents();
+    });
+    
+    // 导出数据
+    exportBtn.addEventListener('click', function() {
+        dataManager.exportAllData();
+    });
+    
+    // 导入数据
+    importBtn.addEventListener('click', function() {
+        importInput.click();
+    });
+    
+    importInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            dataManager.importData(file).then(success => {
+                if (success) {
+                    // 重新加载所有数据
+                    loadCards();
+                    loadTodos();
+                    loadWeatherConfig();
+                    loadWidgetOrder();
+                    
+                    // 重新渲染界面
+                    renderCards();
+                    renderTodos();
+                    notepadContentEl.value = dataManager.getNotepad();
+                    
+                    alert('数据导入成功！');
+                } else {
+                    alert('数据导入失败，请检查文件格式');
+                }
+            });
+        }
+    });
+    
+    // 打开天气配置
+    openWeatherConfigBtn.addEventListener('click', function() {
+        settingsModal.style.display = 'none';
+        // 填充当前配置
+        document.getElementById('weather-api-key').value = weatherConfig.apiKey;
+        document.getElementById('weather-city-code').value = weatherConfig.cityCode;
+        document.getElementById('weather-city-name').value = weatherConfig.cityName;
+        document.getElementById('weather-config-modal').style.display = 'flex';
+    });
+    
+    // 清空所有数据
+    clearDataBtn.addEventListener('click', function() {
+        if (confirm('确定要清空所有数据吗？此操作不可恢复！')) {
+            // 清空所有数据
+            dataManager.data = {
+                cards: [],
+                todos: [],
+                notepad: '',
+                widgetOrder: [],
+                weatherConfig: {
+                    apiKey: 'e17ef733a4009a25e9e13d8d152bb6e7',
+                    cityCode: '445281',
+                    cityName: '普宁市'
+                },
+                widgetVisibility: {
+                    weather: true,
+                    calendar: true,
+                    todo: true,
+                    notepad: true
+                }
+            };
+            
+            // 重新加载和渲染
+            loadCards();
+            loadTodos();
+            loadWeatherConfig();
+            loadWidgetOrder();
+            renderCards();
+            renderTodos();
+            notepadContentEl.value = '';
+            
+            alert('所有数据已清空！');
+        }
+    });
+}
+
+
+
+// 应用小部件显示状态
+function applyWidgetVisibility() {
+    const visibility = dataManager.getWidgetVisibility();
+    
+    // 天气小部件
+    const weatherWidget = document.querySelector('.weather-widget');
+    if (weatherWidget) {
+        weatherWidget.style.display = visibility.weather ? 'block' : 'none';
+    }
+    
+    // 日历小部件
+    const calendarWidget = document.querySelector('.calendar-widget');
+    if (calendarWidget) {
+        calendarWidget.style.display = visibility.calendar ? 'block' : 'none';
+    }
+    
+    // 待办小部件
+    const todoWidget = document.querySelector('.todo-widget');
+    if (todoWidget) {
+        todoWidget.style.display = visibility.todo ? 'block' : 'none';
+    }
+    
+    // 记事本小部件
+    const notepadWidget = document.querySelector('.notepad-widget');
+    if (notepadWidget) {
+        notepadWidget.style.display = visibility.notepad ? 'block' : 'none';
+    }
+    
+    console.log('小部件显示状态已应用:', visibility);
+}
+
+// 小部件管理功能
+function initializeWidgetManagement() {
+    const orderList = document.getElementById('widget-order-list');
+    if (!orderList) return;
+    
+    // 渲染排序列表
+    renderWidgetOrderList();
+    
+    // 绑定拖拽事件
+    bindWidgetOrderEvents();
+    
+    // 应用初始显示状态和排序
+    applyWidgetVisibility();
+    applyWidgetOrder();
+}
+
+// 渲染小部件排序列表
+function renderWidgetOrderList() {
+    const orderList = document.getElementById('widget-order-list');
+    const widgetOrder = dataManager.getWidgetOrder();
+    const visibility = dataManager.getWidgetVisibility();
+    
+    // 小部件配置
+    const widgetConfig = {
+        weather: { icon: '🌤️', name: '天气' },
+        calendar: { icon: '📅', name: '日历' },
+        todo: { icon: '✅', name: '待办事项' },
+        notepad: { icon: '📝', name: '记事本' }
+    };
+    
+    let orderHTML = '';
+    
+    // 如果有保存的顺序，使用保存的顺序
+    if (widgetOrder && widgetOrder.length > 0) {
+        widgetOrder.forEach(widgetType => {
+            if (widgetConfig[widgetType]) {
+                const isVisible = visibility[widgetType];
+                const toggleIcon = isVisible ? '👁️' : '👁️‍🗨️';
+                const toggleClass = isVisible ? 'visible' : 'hidden';
+                
+                orderHTML += `
+                    <div class="widget-order-item" data-widget-type="${widgetType}">
+                        <div class="widget-order-handle">⋮⋮</div>
+                        <div class="widget-order-text">${widgetConfig[widgetType].icon} ${widgetConfig[widgetType].name}</div>
+                        <button class="widget-order-toggle ${toggleClass}" data-widget-type="${widgetType}" title="${isVisible ? '隐藏' : '显示'}">${toggleIcon}</button>
+                    </div>
+                `;
+            }
+        });
+    } else {
+        // 默认顺序
+        Object.entries(widgetConfig).forEach(([widgetType, config]) => {
+            const isVisible = visibility[widgetType];
+            const toggleIcon = isVisible ? '👁️' : '👁️‍🗨️';
+            const toggleClass = isVisible ? 'visible' : 'hidden';
+            
+            orderHTML += `
+                <div class="widget-order-item" data-widget-type="${widgetType}">
+                    <div class="widget-order-handle">⋮⋮</div>
+                    <div class="widget-order-text">${config.icon} ${config.name}</div>
+                    <button class="widget-order-toggle ${toggleClass}" data-widget-type="${widgetType}" title="${isVisible ? '隐藏' : '显示'}">${toggleIcon}</button>
+                </div>
+            `;
+        });
+    }
+    
+    orderList.innerHTML = orderHTML;
+}
+
+// 绑定小部件排序拖拽事件
+function bindWidgetOrderEvents() {
+    const orderItems = document.querySelectorAll('.widget-order-item');
+    let draggedItem = null;
+    
+    orderItems.forEach(item => {
+        item.setAttribute('draggable', true);
+        
+        item.addEventListener('dragstart', function(e) {
+            // 如果点击的是眼睛图标，不启动拖拽
+            if (e.target.classList.contains('widget-order-toggle')) {
+                e.preventDefault();
+                return;
+            }
+            
+            draggedItem = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.outerHTML);
+        });
+        
+        item.addEventListener('dragend', function(e) {
+            this.classList.remove('dragging');
+            draggedItem = null;
+            
+            // 移除所有拖拽相关的类
+            document.querySelectorAll('.widget-order-item').forEach(item => {
+                item.classList.remove('drag-over');
+            });
+        });
+        
+        item.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        });
+        
+        item.addEventListener('drop', function(e) {
+            e.preventDefault();
+            if (draggedItem && draggedItem !== this) {
+                const container = this.parentNode;
+                const draggedIndex = Array.from(container.children).indexOf(draggedItem);
+                const targetIndex = Array.from(container.children).indexOf(this);
+                
+                if (draggedIndex < targetIndex) {
+                    container.insertBefore(draggedItem, this.nextSibling);
+                } else {
+                    container.insertBefore(draggedItem, this);
+                }
+                
+                // 保存新的排序
+                saveWidgetOrderFromList();
+            }
+        });
+        
+        item.addEventListener('dragenter', function(e) {
+            e.preventDefault();
+            if (this !== draggedItem) {
+                this.classList.add('drag-over');
+            }
+        });
+        
+        item.addEventListener('dragleave', function(e) {
+            this.classList.remove('drag-over');
+        });
+    });
+    
+    // 绑定眼睛图标的点击事件
+    const toggleButtons = document.querySelectorAll('.widget-order-toggle');
+    toggleButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const widgetType = this.dataset.widgetType;
+            const visibility = dataManager.getWidgetVisibility();
+            
+            // 切换显示状态
+            visibility[widgetType] = !visibility[widgetType];
+            dataManager.updateWidgetVisibility(visibility);
+            
+            // 更新按钮状态
+            const isVisible = visibility[widgetType];
+            this.textContent = isVisible ? '👁️' : '👁️‍🗨️';
+            this.className = `widget-order-toggle ${isVisible ? 'visible' : 'hidden'}`;
+            this.title = isVisible ? '隐藏' : '显示';
+            
+            // 应用显示状态到主界面
+            applyWidgetVisibility();
+            
+            console.log(`小部件 ${widgetType} 显示状态已切换为:`, isVisible);
+        });
+    });
+}
+
+// 从排序列表保存小部件顺序
+function saveWidgetOrderFromList() {
+    const orderItems = document.querySelectorAll('.widget-order-item');
+    const widgetOrder = Array.from(orderItems).map(item => item.dataset.widgetType);
+    dataManager.setWidgetOrder(widgetOrder);
+    
+    // 应用新的排序到主界面
+    applyWidgetOrder();
+    
+    console.log('小部件排序已保存:', widgetOrder);
+}
+
+// 应用小部件排序到主界面
+function applyWidgetOrder() {
+    const widgetOrder = dataManager.getWidgetOrder();
+    if (!widgetOrder || widgetOrder.length === 0) return;
+    
+    const container = document.querySelector('.widgets-container');
+    if (!container) return;
+    
+    // 根据保存的顺序重新排列小部件
+    widgetOrder.forEach(widgetType => {
+        const widget = container.querySelector(`[data-widget-type="${widgetType}"]`);
+        if (widget) {
+            container.appendChild(widget);
+        }
+    });
+    
+    console.log('小部件排序已应用:', widgetOrder);
+}
+
+// 编辑模式功能
+function initializeEditMode() {
+    const editModeBtn = document.getElementById('edit-mode-btn');
+    const cardsSection = document.querySelector('.cards-section');
+    let isEditMode = false;
+    
+    editModeBtn.addEventListener('click', function() {
+        isEditMode = !isEditMode;
+        
+        if (isEditMode) {
+            // 进入编辑模式
+            cardsSection.classList.add('edit-mode');
+            editModeBtn.classList.add('active');
+            editModeBtn.textContent = '✓';
+            editModeBtn.title = '完成编辑';
+            
+            // 重新渲染卡片以显示编辑图标
+            renderCards();
+            
+            // 启用卡片拖拽功能
+            enableCardDrag();
+        } else {
+            // 退出编辑模式
+            cardsSection.classList.remove('edit-mode');
+            editModeBtn.classList.remove('active');
+            editModeBtn.textContent = '✏️';
+            editModeBtn.title = '编辑模式';
+            
+            // 重新渲染卡片以隐藏编辑图标
+            renderCards();
+            
+            // 禁用卡片拖拽功能
+            disableCardDrag();
+        }
+    });
+}
+
+// 启用卡片拖拽功能
+function enableCardDrag() {
+    const cards = document.querySelectorAll('.card');
+    cards.forEach(card => {
+        card.setAttribute('draggable', true);
+        
+        // 移除之前的事件监听器（如果存在）
+        card.removeEventListener('dragstart', handleDragStart);
+        card.removeEventListener('dragend', handleDragEnd);
+        card.removeEventListener('dragover', handleDragOver);
+        card.removeEventListener('drop', handleDrop);
+        card.removeEventListener('dragenter', handleDragEnter);
+        card.removeEventListener('dragleave', handleDragLeave);
+        
+        // 重新绑定拖拽事件
+        card.addEventListener('dragstart', handleDragStart);
+        card.addEventListener('dragend', handleDragEnd);
+        card.addEventListener('dragover', handleDragOver);
+        card.addEventListener('drop', handleDrop);
+        card.addEventListener('dragenter', handleDragEnter);
+        card.addEventListener('dragleave', handleDragLeave);
+    });
+    
+    const container = document.querySelector('.cards-container');
+    if (container) {
+        container.removeEventListener('dragover', handleDragOver);
+        container.removeEventListener('drop', handleDrop);
+        container.addEventListener('dragover', handleDragOver);
+        container.addEventListener('drop', handleDrop);
+    }
+}
+
+// 禁用卡片拖拽功能
+function disableCardDrag() {
+    const cards = document.querySelectorAll('.card');
+    cards.forEach(card => {
+        card.setAttribute('draggable', false);
+        
+        // 移除拖拽事件监听器
+        card.removeEventListener('dragstart', handleDragStart);
+        card.removeEventListener('dragend', handleDragEnd);
+        card.removeEventListener('dragover', handleDragOver);
+        card.removeEventListener('drop', handleDrop);
+        card.removeEventListener('dragenter', handleDragEnter);
+        card.removeEventListener('dragleave', handleDragLeave);
+    });
+    
+    const container = document.querySelector('.cards-container');
+    if (container) {
+        container.removeEventListener('dragover', handleDragOver);
+        container.removeEventListener('drop', handleDrop);
+    }
+}
+
 // 添加快捷键提示
 console.log(`
 🎉 自定义首页已加载完成！
@@ -1015,9 +1458,11 @@ console.log(`
 - 卡片管理（增删改）
 - 待办事项管理（直接添加、删除、完成）
 - 响应式设计
-- 数据本地存储
+- 内存数据存储
 
 开发者工具中可以使用：
 - exportCards(): 导出卡片数据
 - importCards(file): 导入卡片数据
+- dataManager.exportAllData(): 导出所有数据
+- dataManager.importData(file): 导入所有数据
 `); 
