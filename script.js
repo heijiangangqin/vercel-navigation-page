@@ -1,7 +1,5 @@
 // 全局变量
-let cards = [];
 let editingCardIndex = -1;
-let todos = [];
 let editingTodoIndex = -1;
 let draggedCardIndex = -1;
 let draggedCardElement = null;
@@ -153,36 +151,30 @@ function generateCalendar() {
 }
 
 // 天气配置管理
-let weatherConfig = {
-    apiKey: 'YOUR_AMAP_KEY',//输入key
-    cityCode: '445281',
-    cityName: '普宁市'
-};
-
 function loadWeatherConfig() {
-    weatherConfig = dataManager.getWeatherConfig();
+    return dataManager.getWeatherConfig();
 }
 
-function saveWeatherConfig() {
-    dataManager.setWeatherConfig(weatherConfig);
+function saveWeatherConfig(config) {
+    dataManager.setWeatherConfig(config);
 }
 
 // 天气功能
 function initializeWeather() {
-    loadWeatherConfig();
     fetchWeather();
     // 每30分钟更新一次天气
     setInterval(fetchWeather, 30 * 60 * 1000);
 }
 
 async function fetchWeather() {
+    const config = dataManager.getWeatherConfig();
     try {
-        const response = await fetch(`https://restapi.amap.com/v3/weather/weatherInfo?key=${weatherConfig.apiKey}&city=${weatherConfig.cityCode}&extensions=base`);
+        const response = await fetch(`https://restapi.amap.com/v3/weather/weatherInfo?key=${config.apiKey}&city=${config.cityCode}&extensions=base`);
         const data = await response.json();
         
         if (data.status === '1' && data.lives && data.lives.length > 0) {
             const weather = data.lives[0];
-            displayWeather(weather);
+            displayWeather(weather, config);
         } else {
             throw new Error('天气数据获取失败');
         }
@@ -192,7 +184,7 @@ async function fetchWeather() {
     }
 }
 
-function displayWeather(weather) {
+function displayWeather(weather, config) {
     const weatherIcon = getWeatherIcon(weather.weather);
     const temp = weather.temperature;
     const humidity = weather.humidity;
@@ -202,7 +194,7 @@ function displayWeather(weather) {
     
     weatherContentEl.innerHTML = `
         <div class="weather-main">
-            <div class="weather-location">${weatherConfig.cityName}</div>
+            <div class="weather-location">${config.cityName}</div>
             <div class="weather-icon">${weatherIcon}</div>
             <div class="weather-temp">${temp}°C</div>
             <div class="weather-desc">${weather.weather}</div>
@@ -260,29 +252,19 @@ function getWeatherIcon(weather) {
 
 // 卡片管理功能
 function initializeCards() {
-    loadCards();
     renderCards();
 }
 
-function loadCards() {
-    cards = dataManager.getCards();
-    if (cards.length === 0) {
-        // 默认卡片
-        cards = [
-            { name: 'GitHub', url: 'https://github.com', icon: 'https://github.githubassets.com/favicons/favicon.svg' },
-            { name: '百度', url: 'https://www.baidu.com', icon: 'https://www.baidu.com/favicon.ico' },
-            { name: '知乎', url: 'https://www.zhihu.com', icon: 'https://static.zhihu.com/heifetz/favicon.ico' },
-            { name: '微博', url: 'https://weibo.com', icon: 'https://weibo.com/favicon.ico' }
-        ];
-        saveCards();
-    }
+function getCards() {
+    return dataManager.getCards();
 }
 
-function saveCards() {
+function setCards(cards) {
     dataManager.setCards(cards);
 }
 
 function renderCards() {
+    const cards = getCards();
     cardsContainerEl.innerHTML = '';
     
     if (cards.length === 0) {
@@ -333,8 +315,9 @@ function renderCards() {
         deleteBtn.addEventListener('click', function(e) {
             e.stopPropagation();
             if (confirm(`确定要删除"${card.name}"吗？`)) {
+                const cards = getCards();
                 cards.splice(index, 1);
-                saveCards();
+                setCards(cards);
                 renderCards();
             }
         });
@@ -491,12 +474,14 @@ function handleDrop(e) {
     if (draggedCardIndex === -1 || targetIndex === -1 || targetIndex === draggedCardIndex) return;
     
     // 重新排序卡片数组
-    const draggedCard = cards[draggedCardIndex];
+    const draggedCard = getCards()[draggedCardIndex];
+    const cards = getCards();
     cards.splice(draggedCardIndex, 1);
     cards.splice(targetIndex, 0, draggedCard);
+    setCards(cards);
     
     // 保存并重新渲染
-    saveCards();
+    saveWidgetOrder(); // 保存小部件顺序
     renderCards();
     
     // 重新启用拖拽功能（因为重新渲染后需要重新绑定事件）
@@ -581,12 +566,9 @@ function initializeNotepad() {
 
 // 待办事项功能
 function initializeTodos() {
-    loadTodos();
     renderTodos();
-    
     // 绑定添加待办事件
     addTodoBtn.addEventListener('click', addNewTodo);
-    
     // 绑定回车键添加待办
     todoTitleInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
@@ -595,42 +577,26 @@ function initializeTodos() {
     });
 }
 
-function loadTodos() {
-    todos = dataManager.getTodos();
-    if (todos.length === 0) {
-        // 默认待办事项
-        todos = [
-            {
-                id: Date.now(),
-                title: '欢迎使用待办功能',
-                description: '点击左侧的 + 按钮添加新的待办事项',
-                priority: 'medium',
-                completed: false,
-                createdAt: new Date().toISOString()
-            }
-        ];
-        saveTodos();
-    }
+function getTodos() {
+    return dataManager.getTodos();
 }
 
-function saveTodos() {
+function setTodos(todos) {
     dataManager.setTodos(todos);
 }
 
 function renderTodos() {
+    const todos = getTodos();
     if (todos.length === 0) {
         todoListEl.innerHTML = '';
         todoEmptyEl.style.display = 'block';
         return;
     }
-    
     todoEmptyEl.style.display = 'none';
-    
     // 计算统计信息
     const totalTodos = todos.length;
     const completedTodos = todos.filter(todo => todo.completed).length;
     const progressPercentage = totalTodos > 0 ? (completedTodos / totalTodos) * 100 : 0;
-    
     let todosHTML = `
         <div class="todo-stats">
             <div class="todo-count">${completedTodos}/${totalTodos} 已完成</div>
@@ -642,7 +608,6 @@ function renderTodos() {
             </div>
         </div>
     `;
-    
     // 按优先级和完成状态排序
     const sortedTodos = [...todos].sort((a, b) => {
         if (a.completed !== b.completed) {
@@ -651,7 +616,6 @@ function renderTodos() {
         const priorityOrder = { high: 3, medium: 2, low: 1 };
         return priorityOrder[b.priority] - priorityOrder[a.priority];
     });
-    
     sortedTodos.forEach((todo, index) => {
         todosHTML += `
             <div class="todo-item ${todo.completed ? 'completed' : ''}" data-id="${todo.id}">
@@ -669,9 +633,7 @@ function renderTodos() {
             </div>
         `;
     });
-    
     todoListEl.innerHTML = todosHTML;
-    
     // 重新绑定事件
     bindTodoEvents();
 }
@@ -686,15 +648,17 @@ function getPriorityText(priority) {
 }
 
 function toggleTodoComplete(todoId) {
+    const todos = getTodos();
     const todoIndex = todos.findIndex(todo => todo.id === todoId);
     if (todoIndex !== -1) {
         todos[todoIndex].completed = !todos[todoIndex].completed;
-        saveTodos();
+        setTodos(todos);
         renderTodos();
     }
 }
 
 function toggleTodoPriority(todoId) {
+    const todos = getTodos();
     const todoIndex = todos.findIndex(todo => todo.id === todoId);
     if (todoIndex !== -1) {
         const currentPriority = todos[todoIndex].priority;
@@ -703,8 +667,7 @@ function toggleTodoPriority(todoId) {
         const nextIndex = (currentIndex + 1) % priorityOrder.length;
         const newPriority = priorityOrder[nextIndex];
         todos[todoIndex].priority = newPriority;
-        saveTodos();
-        
+        setTodos(todos);
         // 立即更新当前元素的显示
         const priorityElement = document.querySelector(`[data-id="${todoId}"] .todo-priority`);
         if (priorityElement) {
@@ -749,18 +712,16 @@ function bindTodoEvents() {
 }
 
 function deleteTodo(todoId) {
+    let todos = getTodos();
     todos = todos.filter(todo => todo.id !== todoId);
-    saveTodos();
+    setTodos(todos);
     renderTodos();
 }
 
 function addNewTodo() {
     const title = todoTitleInput.value.trim();
-    
-    if (!title) {
-        return;
-    }
-    
+    if (!title) return;
+    const todos = getTodos();
     const newTodo = {
         id: Date.now(),
         title: title,
@@ -769,14 +730,10 @@ function addNewTodo() {
         completed: false,
         createdAt: new Date().toISOString()
     };
-    
     todos.push(newTodo);
-    saveTodos();
+    setTodos(todos);
     renderTodos();
-    
-    // 清空输入框
     todoTitleInput.value = '';
-    todoTitleInput.focus();
 }
 
 // 搜索功能
@@ -860,8 +817,9 @@ function initializeModals() {
             icon: icon || null
         };
         
+        const cards = getCards();
         cards.push(newCard);
-        saveCards();
+        setCards(cards);
         renderCards();
         cardModal.style.display = 'none';
     });
@@ -878,12 +836,13 @@ function initializeModals() {
         }
         
         if (editingCardIndex >= 0) {
+            const cards = getCards();
             cards[editingCardIndex] = {
                 name: name,
                 url: url,
                 icon: icon || null
             };
-            saveCards();
+            setCards(cards);
             renderCards();
             editModal.style.display = 'none';
             editingCardIndex = -1;
@@ -893,9 +852,10 @@ function initializeModals() {
     // 删除卡片
     document.getElementById('delete-card-btn').addEventListener('click', function() {
         if (editingCardIndex >= 0) {
-            if (confirm(`确定要删除"${cards[editingCardIndex].name}"吗？`)) {
+            if (confirm(`确定要删除"${getCards()[editingCardIndex].name}"吗？`)) {
+                const cards = getCards();
                 cards.splice(editingCardIndex, 1);
-                saveCards();
+                setCards(cards);
                 renderCards();
                 editModal.style.display = 'none';
                 editingCardIndex = -1;
@@ -918,23 +878,17 @@ function initializeModals() {
             return;
         }
         
-        weatherConfig.apiKey = apiKey;
-        weatherConfig.cityCode = cityCode;
-        weatherConfig.cityName = cityName;
-        
-        saveWeatherConfig();
-        weatherConfigModal.style.display = 'none';
-        
-        // 重新获取天气信息
-        fetchWeather();
+        saveWeatherConfig({ apiKey, cityCode, cityName });
+        fetchWeather(); // 立即刷新
         
         alert('天气配置已保存！');
+        weatherConfigModal.style.display = 'none';
     });
 }
 
 function openEditModal(index) {
     editingCardIndex = index;
-    const card = cards[index];
+    const card = getCards()[index];
     
     document.getElementById('edit-card-name').value = card.name;
     document.getElementById('edit-card-url').value = card.url;
@@ -996,7 +950,7 @@ document.addEventListener('keydown', function(e) {
 
 // 导出卡片数据
 function exportCards() {
-    const dataStr = JSON.stringify(cards, null, 2);
+    const dataStr = JSON.stringify(getCards(), null, 2);
     const dataBlob = new Blob([dataStr], {type: 'application/json'});
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
@@ -1013,8 +967,7 @@ function importCards(file) {
         try {
             const importedCards = JSON.parse(e.target.result);
             if (Array.isArray(importedCards)) {
-                cards = importedCards;
-                saveCards();
+                setCards(importedCards);
                 renderCards();
                 alert('卡片导入成功！');
             } else {
@@ -1083,9 +1036,10 @@ function initializeSettings() {
     openWeatherConfigBtn.addEventListener('click', function() {
         settingsModal.style.display = 'none';
         // 填充当前配置
-        document.getElementById('weather-api-key').value = weatherConfig.apiKey;
-        document.getElementById('weather-city-code').value = weatherConfig.cityCode;
-        document.getElementById('weather-city-name').value = weatherConfig.cityName;
+        const config = dataManager.getWeatherConfig();
+        document.getElementById('weather-api-key').value = config.apiKey;
+        document.getElementById('weather-city-code').value = config.cityCode;
+        document.getElementById('weather-city-name').value = config.cityName;
         document.getElementById('weather-config-modal').style.display = 'flex';
     });
     

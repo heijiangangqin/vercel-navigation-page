@@ -144,7 +144,7 @@ class DataManager {
     // 设置应用卡片
     setCards(cards) {
         this.data.cards = cards;
-        // 静默保存，不自动下载文件
+        this.saveToFile();
     }
 
     // 获取待办事项
@@ -155,7 +155,7 @@ class DataManager {
     // 设置待办事项
     setTodos(todos) {
         this.data.todos = todos;
-        // 静默保存，不自动下载文件
+        this.saveToFile();
     }
 
     // 获取记事本内容
@@ -166,7 +166,7 @@ class DataManager {
     // 设置记事本内容
     setNotepad(content) {
         this.data.notepad = content;
-        // 静默保存，不自动下载文件
+        this.saveToFile();
     }
 
     // 获取小部件排序
@@ -189,7 +189,7 @@ class DataManager {
     // 设置天气配置
     setWeatherConfig(config) {
         this.data.weatherConfig = { ...this.data.weatherConfig, ...config };
-        // 静默保存，不自动下载文件
+        this.saveToFile(); // 新增：每次设置都保存到localStorage
     }
 
     // 获取小部件可见性
