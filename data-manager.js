@@ -14,7 +14,6 @@ class DataManager {
             },
             widgetVisibility: {
                 weather: true,
-                calendar: true,
                 todo: true,
                 notepad: true
             }

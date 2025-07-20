@@ -278,64 +278,6 @@ body {
     margin: 10px;
 }
 
-/* 日历小部件 */
-.calendar-main {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-}
-
-.current-day {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-.day-number {
-    font-size: 3rem;
-    font-weight: bold;
-    color: #ff6b6b;
-}
-
-.day-info {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.day-count, .lunar-date {
-    font-size: 0.9rem;
-    color: #666;
-}
-
-.calendar-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 5px;
-    font-size: 0.8rem;
-}
-
-.calendar-day {
-    text-align: center;
-    padding: 5px;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background 0.3s ease;
-}
-
-.calendar-day:hover {
-    background: rgba(0, 120, 215, 0.1);
-}
-
-.calendar-day.today {
-    background: #ff6b6b;
-    color: white;
-}
-
-.calendar-day.other-month {
-    color: #ccc;
-}
-
 /* 记事本小部件 */
 .notepad-widget {
     background: linear-gradient(135deg, #fff9c4 0%, #fff59d 100%);
@@ -370,6 +312,8 @@ body {
 .todo-widget .widget-header h3 {
     color: white;
     margin: 0;
+    text-align: center;
+    width: 100%;
 }
 
 .add-todo-btn {

@@ -12,8 +12,6 @@ const WEATHER_CONFIG_KEY = 'homepage_weather_config';
 // DOM元素
 const currentTimeEl = document.getElementById('current-time');
 const currentDateEl = document.getElementById('current-date');
-const dayNumberEl = document.getElementById('day-number');
-const calendarGridEl = document.getElementById('calendar-grid');
 const cardsContainerEl = document.getElementById('cards-container');
 const notepadContentEl = document.getElementById('notepad-content');
 const weatherContentEl = document.getElementById('weather-content');
@@ -29,7 +27,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     await dataManager.initialize();
     
     initializeTime();
-    initializeCalendar();
     initializeWeather();
     initializeCards();
     initializeNotepad();
@@ -79,7 +76,7 @@ function updateTime() {
     currentDateEl.textContent = `${dateString} ${lunarInfo}`;
     
     // 更新当前日期数字
-    dayNumberEl.textContent = now.getDate();
+    // dayNumberEl.textContent = now.getDate(); // 删除
 }
 
 function getLunarInfo(date) {
@@ -94,60 +91,6 @@ function getLunarInfo(date) {
     const day = date.getDate();
     
     return `${lunarMonths[month - 1]}月${lunarDays[day - 1] || '初一'} 丁未`;
-}
-
-// 日历功能
-function initializeCalendar() {
-    generateCalendar();
-}
-
-function generateCalendar() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    const currentDay = now.getDate();
-    
-    // 获取当月第一天和最后一天
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    
-    // 获取第一天是星期几
-    const firstDayWeek = firstDay.getDay();
-    
-    // 获取上个月的最后几天
-    const prevMonthLastDay = new Date(year, month, 0);
-    const prevMonthDays = prevMonthLastDay.getDate();
-    
-    let calendarHTML = '';
-    
-    // 星期标题
-    const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
-    weekDays.forEach(day => {
-        calendarHTML += `<div class="calendar-day week-header">${day}</div>`;
-    });
-    
-    // 上个月的日期
-    for (let i = firstDayWeek - 1; i >= 0; i--) {
-        const day = prevMonthDays - i;
-        calendarHTML += `<div class="calendar-day other-month">${day}</div>`;
-    }
-    
-    // 当月的日期
-    for (let day = 1; day <= lastDay.getDate(); day++) {
-        const isToday = day === currentDay;
-        const className = isToday ? 'calendar-day today' : 'calendar-day';
-        calendarHTML += `<div class="${className}">${day}</div>`;
-    }
-    
-    // 下个月的日期（填充到42个格子）
-    const totalCells = 42; // 6行7列
-    const remainingCells = totalCells - weekDays.length - firstDayWeek - lastDay.getDate();
-    
-    for (let day = 1; day <= remainingCells; day++) {
-        calendarHTML += `<div class="calendar-day other-month">${day}</div>`;
-    }
-    
-    calendarGridEl.innerHTML = calendarHTML;
 }
 
 // 天气配置管理
@@ -1091,12 +1034,6 @@ function applyWidgetVisibility() {
         weatherWidget.style.display = visibility.weather ? 'block' : 'none';
     }
     
-    // 日历小部件
-    const calendarWidget = document.querySelector('.calendar-widget');
-    if (calendarWidget) {
-        calendarWidget.style.display = visibility.calendar ? 'block' : 'none';
-    }
-    
     // 待办小部件
     const todoWidget = document.querySelector('.todo-widget');
     if (todoWidget) {
@@ -1134,10 +1071,9 @@ function renderWidgetOrderList() {
     const widgetOrder = dataManager.getWidgetOrder();
     const visibility = dataManager.getWidgetVisibility();
     
-    // 小部件配置
+    // 修改widgetConfig，移除日历，只保留weather、todo、notepad
     const widgetConfig = {
         weather: { icon: '🌤️', name: '天气' },
-        calendar: { icon: '📅', name: '日历' },
         todo: { icon: '✅', name: '待办事项' },
         notepad: { icon: '📝', name: '记事本' }
     };
