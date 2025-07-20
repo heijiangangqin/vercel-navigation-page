@@ -146,7 +146,7 @@ function generateCalendar() {
 
 // 天气配置管理
 let weatherConfig = {
-    apiKey: 'e17ef733a4009a2589e61358d52bb6e7',
+    apiKey: 'e17ef733a4009a25e9e13d8d152bb6e7',
     cityCode: '445281',
     cityName: '普宁市'
 };
