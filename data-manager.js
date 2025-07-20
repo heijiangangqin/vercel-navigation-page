@@ -8,7 +8,7 @@ class DataManager {
             notepad: '',
             widgetOrder: [],
             weatherConfig: {
-                apiKey: 'e17ef733a4009a25e9e13d8d152bb6e7',
+                apiKey: 'YOUR_AMAP_KEY',
                 cityCode: '445281',
                 cityName: '普宁市'
             },
