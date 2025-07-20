@@ -154,7 +154,7 @@ function generateCalendar() {
 
 // 天气配置管理
 let weatherConfig = {
-    apiKey: 'shurukey',//输入key
+    apiKey: 'YOUR_AMAP_KEY',//输入key
     cityCode: '445281',
     cityName: '普宁市'
 };
