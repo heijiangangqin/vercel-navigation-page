@@ -128,15 +128,15 @@ homepage/
 ├── index.html              # 主页面文件
 ├── styles.css              # 样式文件
 ├── script.js               # JavaScript逻辑文件
-├── favicon.svg             # 浏览器标签页图标（SVG格式）
-├── favicon.png             # 浏览器标签页图标（PNG格式）
-├── favicon.ico             # 浏览器标签页图标（ICO格式）
 ├── README.md               # 项目说明文档
 ├── LAYOUT_GUIDE.md         # 页面布局结构说明
 ├── DRAG_FEATURES.md        # 拖拽功能详细说明
 ├── FAVICON_SETUP.md        # Favicon设置说明
 ├── CLEANUP_LOG.md          # 项目文件清理日志
 └── icons/
+    ├── favicon.svg         # 浏览器标签页图标（SVG格式）
+    ├── favicon.png         # 浏览器标签页图标（PNG格式）
+    ├── favicon.ico         # 浏览器标签页图标（ICO格式）
     └── default-icon.svg    # 默认卡片图标
 ```
 
