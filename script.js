@@ -11,6 +11,7 @@ const STORAGE_KEY = 'homepage_cards';
 const NOTEPAD_KEY = 'homepage_notepad';
 const TODO_KEY = 'homepage_todos';
 const WIDGET_ORDER_KEY = 'homepage_widget_order';
+const WEATHER_CONFIG_KEY = 'homepage_weather_config';
 
 // DOM元素
 const currentTimeEl = document.getElementById('current-time');
@@ -143,8 +144,31 @@ function generateCalendar() {
     calendarGridEl.innerHTML = calendarHTML;
 }
 
+// 天气配置管理
+let weatherConfig = {
+    apiKey: 'e17ef733a4009a2589e61358d52bb6e7',
+    cityCode: '445281',
+    cityName: '普宁市'
+};
+
+function loadWeatherConfig() {
+    const savedConfig = localStorage.getItem(WEATHER_CONFIG_KEY);
+    if (savedConfig) {
+        try {
+            weatherConfig = { ...weatherConfig, ...JSON.parse(savedConfig) };
+        } catch (error) {
+            console.error('加载天气配置失败:', error);
+        }
+    }
+}
+
+function saveWeatherConfig() {
+    localStorage.setItem(WEATHER_CONFIG_KEY, JSON.stringify(weatherConfig));
+}
+
 // 天气功能
 function initializeWeather() {
+    loadWeatherConfig();
     fetchWeather();
     // 每30分钟更新一次天气
     setInterval(fetchWeather, 30 * 60 * 1000);
@@ -152,7 +176,7 @@ function initializeWeather() {
 
 async function fetchWeather() {
     try {
-        const response = await fetch('https://restapi.amap.com/v3/weather/weatherInfo?key=e17ef733a4009a2589e61358d52bb6e7&city=445281&extensions=base');
+        const response = await fetch(`https://restapi.amap.com/v3/weather/weatherInfo?key=${weatherConfig.apiKey}&city=${weatherConfig.cityCode}&extensions=base`);
         const data = await response.json();
         
         if (data.status === '1' && data.lives && data.lives.length > 0) {
@@ -177,6 +201,7 @@ function displayWeather(weather) {
     
     weatherContentEl.innerHTML = `
         <div class="weather-main">
+            <div class="weather-location">${weatherConfig.cityName}</div>
             <div class="weather-icon">${weatherIcon}</div>
             <div class="weather-temp">${temp}°C</div>
             <div class="weather-desc">${weather.weather}</div>
@@ -715,6 +740,7 @@ function initializeModals() {
     const addCardBtn = document.getElementById('add-card-btn');
     const cardModal = document.getElementById('card-modal');
     const editModal = document.getElementById('edit-modal');
+    const weatherConfigModal = document.getElementById('weather-config-modal');
     const closeModalBtns = document.querySelectorAll('.close-btn, .btn-secondary');
     
     // 打开添加卡片模态框
@@ -723,11 +749,22 @@ function initializeModals() {
         clearForm('card-modal');
     });
     
+    // 打开天气配置模态框
+    const weatherConfigBtn = document.getElementById('weather-config-btn');
+    weatherConfigBtn.addEventListener('click', function() {
+        // 填充当前配置
+        document.getElementById('weather-api-key').value = weatherConfig.apiKey;
+        document.getElementById('weather-city-code').value = weatherConfig.cityCode;
+        document.getElementById('weather-city-name').value = weatherConfig.cityName;
+        weatherConfigModal.style.display = 'flex';
+    });
+    
     // 关闭模态框
     closeModalBtns.forEach(btn => {
         btn.addEventListener('click', function() {
             cardModal.style.display = 'none';
             editModal.style.display = 'none';
+            weatherConfigModal.style.display = 'none';
         });
     });
     
@@ -738,6 +775,9 @@ function initializeModals() {
         }
         if (e.target === editModal) {
             editModal.style.display = 'none';
+        }
+        if (e.target === weatherConfigModal) {
+            weatherConfigModal.style.display = 'none';
         }
     });
     
@@ -804,6 +844,30 @@ function initializeModals() {
     // 图标预览功能
     setupIconPreview('card-icon', 'icon-preview');
     setupIconPreview('edit-card-icon', 'edit-icon-preview');
+    
+    // 保存天气配置
+    document.getElementById('save-weather-config-btn').addEventListener('click', function() {
+        const apiKey = document.getElementById('weather-api-key').value.trim();
+        const cityCode = document.getElementById('weather-city-code').value.trim();
+        const cityName = document.getElementById('weather-city-name').value.trim();
+        
+        if (!apiKey || !cityCode || !cityName) {
+            alert('请填写完整的配置信息');
+            return;
+        }
+        
+        weatherConfig.apiKey = apiKey;
+        weatherConfig.cityCode = cityCode;
+        weatherConfig.cityName = cityName;
+        
+        saveWeatherConfig();
+        weatherConfigModal.style.display = 'none';
+        
+        // 重新获取天气信息
+        fetchWeather();
+        
+        alert('天气配置已保存！');
+    });
 }
 
 function openEditModal(index) {

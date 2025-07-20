@@ -47,6 +47,7 @@
                 <div class="widget-header">
                     <div class="widget-drag-handle" title="拖拽排序">⋮⋮</div>
                     <h3>🌤️ 天气</h3>
+                    <button class="widget-config-btn" id="weather-config-btn" title="配置">⚙️</button>
                 </div>
                 <div class="widget-content">
                     <div class="weather-content" id="weather-content">
@@ -169,7 +170,36 @@
         </div>
     </div>
 
-
+    <!-- 天气配置模态框 -->
+    <div class="modal" id="weather-config-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🌤️ 天气配置</h3>
+                <button class="close-btn" id="close-weather-config-modal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="weather-api-key">高德地图API密钥</label>
+                    <input type="text" id="weather-api-key" placeholder="输入您的API密钥" required>
+                    <small>请在高德开放平台申请API密钥</small>
+                </div>
+                <div class="form-group">
+                    <label for="weather-city-code">城市代码</label>
+                    <input type="text" id="weather-city-code" placeholder="输入城市代码，如：445281" required>
+                    <small>城市代码可在高德开放平台查询</small>
+                </div>
+                <div class="form-group">
+                    <label for="weather-city-name">城市名称</label>
+                    <input type="text" id="weather-city-name" placeholder="输入城市名称，如：普宁市" required>
+                    <small>用于显示的城市名称</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancel-weather-config-btn">取消</button>
+                <button class="btn btn-primary" id="save-weather-config-btn">保存</button>
+            </div>
+        </div>
+    </div>
 
     <script src="script.js"></script>
 </body>
