@@ -506,6 +506,7 @@ body {
     font-weight: 500;
     font-size: 0.95rem;
     word-break: break-word;
+    text-align: center;
 }
 
 .todo-priority {
