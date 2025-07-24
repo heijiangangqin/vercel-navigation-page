@@ -22,14 +22,14 @@ const addTodoBtn = document.getElementById('add-todo-btn');
 const mainContentEl = document.getElementById('main-content');
 
 // 初始化
-document.addEventListener('DOMContentLoaded', async function() {
-    // 验证码登录流程
-    await dataManager.initialize();
-    if (!dataManager.isVerified) {
-        showVerificationModal();
-        return;
-    }
-    
+// 优化：先同步加载本地缓存，立即渲染主内容，再异步初始化云端
+// 1. 先同步加载本地缓存
+if (window.dataManager && typeof dataManager.loadFromLocalStorage === 'function') {
+    dataManager.loadFromLocalStorage();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // 2. 立即渲染主内容（不等待云端）
     initializeTime();
     initializeWeather();
     initializeCards();
@@ -37,18 +37,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     initializeTodos();
     initializeSearch();
     initializeModals();
-    
-    // 每秒更新时间
     setInterval(updateTime, 1000);
-    
-    // 初始化设置功能
     initializeSettings();
-    
-    // 初始化小部件管理功能（在DOM加载完成后）
     initializeWidgetManagement();
-    
-    // 初始化编辑模式功能
     initializeEditMode();
+
+    // 3. 异步初始化云端（验证码/Redis）
+    dataManager.initialize().then(() => {
+        if (!dataManager.isVerified) {
+            showVerificationModal();
+        }
+        // 如果后台拉取到Redis数据并刷新页面，UI会自动同步
+    });
 });
 
 function showVerificationModal() {
