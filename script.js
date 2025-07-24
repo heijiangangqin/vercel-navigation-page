@@ -22,13 +22,13 @@ const addTodoBtn = document.getElementById('add-todo-btn');
 const mainContentEl = document.getElementById('main-content');
 
 // 初始化
-// 优化：先同步加载本地缓存，立即渲染主内容，再异步初始化云端
-// 1. 先同步加载本地缓存
-if (window.dataManager && typeof dataManager.loadFromLocalStorage === 'function') {
-    dataManager.loadFromLocalStorage();
-}
+// 优化：所有初始化都放到 DOMContentLoaded，确保本地缓存优先、UI 立即渲染、云端异步
 
 document.addEventListener('DOMContentLoaded', function() {
+    // 1. 先同步加载本地缓存
+    if (window.dataManager && typeof dataManager.loadFromLocalStorage === 'function') {
+        dataManager.loadFromLocalStorage();
+    }
     // 2. 立即渲染主内容（不等待云端）
     initializeTime();
     initializeWeather();
@@ -41,7 +41,6 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeSettings();
     initializeWidgetManagement();
     initializeEditMode();
-
     // 3. 异步初始化云端（验证码/Redis）
     dataManager.initialize().then(() => {
         if (!dataManager.isVerified) {
