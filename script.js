@@ -23,8 +23,12 @@ const mainContentEl = document.getElementById('main-content');
 
 // 初始化
 document.addEventListener('DOMContentLoaded', async function() {
-    // 初始化数据管理器
+    // 验证码登录流程
     await dataManager.initialize();
+    if (!dataManager.isVerified) {
+        showVerificationModal();
+        return;
+    }
     
     initializeTime();
     initializeWeather();
@@ -46,6 +50,48 @@ document.addEventListener('DOMContentLoaded', async function() {
     // 初始化编辑模式功能
     initializeEditMode();
 });
+
+function showVerificationModal() {
+    // 简单弹窗，实际可用更美观的 modal
+    let modal = document.createElement('div');
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100vw';
+    modal.style.height = '100vh';
+    modal.style.background = 'rgba(0,0,0,0.5)';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.style.zIndex = '9999';
+    modal.innerHTML = `
+      <div style="background:#fff;padding:32px 24px;border-radius:8px;min-width:320px;box-shadow:0 2px 16px #0002;text-align:center;">
+        <div style="font-size:1.2rem;margin-bottom:16px;">请输入验证码</div>
+        <input id="verify-code-input" style="font-size:1.1rem;padding:8px;width:180px;text-align:center;" placeholder="请输入验证码"><br><br>
+        <button id="submit-code-btn">提交</button>
+        <div id="verify-msg" style="color:#c00;margin-top:12px;"></div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    const input = document.getElementById('verify-code-input');
+    const submitBtn = document.getElementById('submit-code-btn');
+    const msg = document.getElementById('verify-msg');
+    submitBtn.onclick = async function() {
+        const code = input.value.trim();
+        if (!code) { msg.textContent = '请输入验证码'; return; }
+        msg.textContent = '验证中...';
+        const ok = await dataManager.verifyCode(code);
+        if (ok) {
+            msg.textContent = '验证成功，正在加载...';
+            setTimeout(() => { location.reload(); }, 800);
+        } else {
+            msg.textContent = '验证码错误或已过期';
+        }
+    };
+    input.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') submitBtn.onclick();
+    });
+}
 
 // 时间相关功能
 function initializeTime() {

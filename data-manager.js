@@ -1,7 +1,7 @@
 // 数据管理模块
 class DataManager {
     constructor() {
-        this.dataFile = 'homepage-data.json';
+        this.dataKey = 'homepage_data';
         this.data = {
             cards: [],
             todos: [],
@@ -19,201 +19,125 @@ class DataManager {
             }
         };
         this.isInitialized = false;
+        this.isVerified = false;
     }
 
-    // 初始化数据管理器
     async initialize() {
         if (this.isInitialized) return;
-        
-        // 直接从localStorage迁移数据到内存
-        await this.migrateFromLocalStorage();
-        
+        // 检查 session
+        this.isVerified = await this.checkSession();
+        if (this.isVerified) {
+            await this.loadFromRedis();
+        } else {
+            // fallback: localStorage
+            this.loadFromLocalStorage();
+        }
         this.isInitialized = true;
     }
 
-    // 从JSON文件加载数据
-    async loadFromFile() {
+    async checkSession() {
         try {
-            const response = await fetch(this.dataFile);
-            if (!response.ok) {
-                throw new Error('文件不存在');
+            // 尝试拉取数据，若未授权会 401
+            const resp = await fetch(`/api/redis.js?key=${this.dataKey}`);
+            if (resp.status === 401) return false;
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    async requestVerificationCode() {
+        // 真实项目应通过邮件/短信/其它方式发送
+        const resp = await fetch('/api/redis.js', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'request_code' })
+        });
+        const data = await resp.json();
+        return data.code; // 仅演示，实际应隐藏
+    }
+
+    async verifyCode(code) {
+        const resp = await fetch('/api/redis.js', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'verify_code', code })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            this.isVerified = true;
+            await this.loadFromRedis();
+            return true;
+        }
+        return false;
+    }
+
+    async loadFromRedis() {
+        try {
+            const resp = await fetch(`/api/redis.js?key=${this.dataKey}`);
+            if (!resp.ok) throw new Error('Redis unavailable');
+            const result = await resp.json();
+            if (result.result) {
+                this.data = { ...this.data, ...JSON.parse(result.result) };
+                this.saveToLocalStorage(); // 同步一份本地 fallback
             }
-            const fileData = await response.json();
-            this.data = { ...this.data, ...fileData };
-            console.log('从JSON文件加载数据成功');
-        } catch (error) {
-            throw error;
+        } catch {
+            this.loadFromLocalStorage();
         }
     }
 
-    // 保存数据到JSON文件（静默保存，不自动下载）
-    async saveToFile() {
+    async saveToRedis() {
+        if (!this.isVerified) {
+            this.saveToLocalStorage();
+            return;
+        }
         try {
-            // 将数据保存到localStorage作为备份
-            localStorage.setItem('homepage_data_backup', JSON.stringify(this.data));
-            console.log('数据已保存到localStorage备份');
-        } catch (error) {
-            console.error('保存数据失败:', error);
+            await fetch('/api/redis.js', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: this.dataKey, value: this.data })
+            });
+            this.saveToLocalStorage(); // 同步一份本地 fallback
+        } catch {
+            this.saveToLocalStorage();
         }
     }
 
-    // 从localStorage迁移数据
-    async migrateFromLocalStorage() {
+    loadFromLocalStorage() {
         try {
-            // 首先尝试从备份中恢复数据
             const backupData = localStorage.getItem('homepage_data_backup');
             if (backupData) {
                 const backup = JSON.parse(backupData);
                 this.data = { ...this.data, ...backup };
-                console.log('从备份恢复数据成功');
-                return;
             }
-
-            // 如果没有备份，则从旧的localStorage项目迁移
-            // 迁移应用卡片
-            const savedCards = localStorage.getItem('homepage_cards');
-            if (savedCards) {
-                this.data.cards = JSON.parse(savedCards);
-                console.log('迁移应用卡片数据:', this.data.cards.length, '个');
-            }
-
-            // 迁移待办事项
-            const savedTodos = localStorage.getItem('homepage_todos');
-            if (savedTodos) {
-                this.data.todos = JSON.parse(savedTodos);
-                console.log('迁移待办事项数据:', this.data.todos.length, '个');
-            }
-
-            // 迁移记事本
-            const savedNotepad = localStorage.getItem('homepage_notepad');
-            if (savedNotepad) {
-                this.data.notepad = savedNotepad;
-                console.log('迁移记事本数据');
-            }
-
-            // 迁移小部件排序
-            const savedWidgetOrder = localStorage.getItem('homepage_widget_order');
-            if (savedWidgetOrder) {
-                this.data.widgetOrder = JSON.parse(savedWidgetOrder);
-                console.log('迁移小部件排序数据');
-            }
-
-            // 迁移天气配置
-            const savedWeatherConfig = localStorage.getItem('homepage_weather_config');
-            if (savedWeatherConfig) {
-                this.data.weatherConfig = { ...this.data.weatherConfig, ...JSON.parse(savedWeatherConfig) };
-                console.log('迁移天气配置数据');
-            }
-
-            console.log('数据迁移完成，已加载到内存');
-
-            // 清理localStorage（可选）
-            // this.clearLocalStorage();
-        } catch (error) {
-            console.error('数据迁移失败:', error);
-        }
+        } catch {}
     }
 
-    // 清理localStorage（迁移完成后）
-    clearLocalStorage() {
-        localStorage.removeItem('homepage_cards');
-        localStorage.removeItem('homepage_todos');
-        localStorage.removeItem('homepage_notepad');
-        localStorage.removeItem('homepage_widget_order');
-        localStorage.removeItem('homepage_weather_config');
-        console.log('localStorage已清理');
+    saveToLocalStorage() {
+        try {
+            localStorage.setItem('homepage_data_backup', JSON.stringify(this.data));
+        } catch {}
     }
 
-    // 获取数据
-    getData(key) {
-        return this.data[key];
-    }
-
-    // 设置数据
-    setData(key, value) {
-        this.data[key] = value;
-        // 静默保存，不自动下载文件
-    }
-
-    // 获取应用卡片
-    getCards() {
-        return this.data.cards;
-    }
-
-    // 设置应用卡片
-    setCards(cards) {
-        this.data.cards = cards;
-        this.saveToFile();
-    }
-
-    // 获取待办事项
-    getTodos() {
-        return this.data.todos;
-    }
-
-    // 设置待办事项
-    setTodos(todos) {
-        this.data.todos = todos;
-        this.saveToFile();
-    }
-
-    // 获取记事本内容
-    getNotepad() {
-        return this.data.notepad;
-    }
-
-    // 设置记事本内容
-    setNotepad(content) {
-        this.data.notepad = content;
-        this.saveToFile();
-    }
-
-    // 获取小部件排序
-    getWidgetOrder() {
-        return this.data.widgetOrder;
-    }
-
-    // 设置小部件排序
-    setWidgetOrder(order) {
-        this.data.widgetOrder = order;
-        this.saveToFile();
-        console.log('小部件排序已保存到数据管理器:', order);
-    }
-
-    // 获取天气配置
-    getWeatherConfig() {
-        return this.data.weatherConfig;
-    }
-
-    // 设置天气配置
-    setWeatherConfig(config) {
-        this.data.weatherConfig = { ...this.data.weatherConfig, ...config };
-        this.saveToFile(); // 新增：每次设置都保存到localStorage
-    }
-
-    // 获取小部件可见性
-    getWidgetVisibility() {
-        return this.data.widgetVisibility;
-    }
-
-    // 设置单个小部件可见性
-    setWidgetVisibility(widgetType, visible) {
-        this.data.widgetVisibility[widgetType] = visible;
-        // 静默保存，不自动下载文件
-    }
-
-    // 更新所有小部件可见性
-    updateWidgetVisibility(visibility) {
-        this.data.widgetVisibility = visibility;
-        this.saveToFile();
-        console.log('小部件可见性已保存到数据管理器:', visibility);
-    }
-
-    // 导出所有数据
+    // 其它 get/set 方法全部调用 saveToRedis
+    getData(key) { return this.data[key]; }
+    setData(key, value) { this.data[key] = value; this.saveToRedis(); }
+    getCards() { return this.data.cards; }
+    setCards(cards) { this.data.cards = cards; this.saveToRedis(); }
+    getTodos() { return this.data.todos; }
+    setTodos(todos) { this.data.todos = todos; this.saveToRedis(); }
+    getNotepad() { return this.data.notepad; }
+    setNotepad(content) { this.data.notepad = content; this.saveToRedis(); }
+    getWidgetOrder() { return this.data.widgetOrder; }
+    setWidgetOrder(order) { this.data.widgetOrder = order; this.saveToRedis(); }
+    getWeatherConfig() { return this.data.weatherConfig; }
+    setWeatherConfig(config) { this.data.weatherConfig = { ...this.data.weatherConfig, ...config }; this.saveToRedis(); }
+    getWidgetVisibility() { return this.data.widgetVisibility; }
+    setWidgetVisibility(widgetType, visible) { this.data.widgetVisibility[widgetType] = visible; this.saveToRedis(); }
+    updateWidgetVisibility(visibility) { this.data.widgetVisibility = visibility; this.saveToRedis(); }
     exportAllData() {
         const blob = new Blob([JSON.stringify(this.data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
-        
         const a = document.createElement('a');
         a.href = url;
         a.download = `homepage-backup-${new Date().toISOString().split('T')[0]}.json`;
@@ -222,27 +146,17 @@ class DataManager {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     }
-
-    // 导入数据
     async importData(file) {
         try {
             const text = await file.text();
             const importedData = JSON.parse(text);
-
-            // 完全覆盖数据（如果你想合并就用原来的写法）
             this.data = importedData;
-
-            // 持久化保存
-            await this.saveToFile();
-
-            console.log('数据导入成功');
+            await this.saveToRedis();
             return true;
-        } catch (error) {
-            console.error('数据导入失败:', error);
+        } catch {
             return false;
         }
     }
 }
 
-// 创建全局数据管理器实例
 const dataManager = new DataManager(); 
