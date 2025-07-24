@@ -1003,14 +1003,12 @@ function initializeSettings() {
                 }
             };
             
-            // 重新加载和渲染
-            loadCards();
-            loadTodos();
-            loadWeatherConfig();
-            loadWidgetOrder();
+            // 重新渲染界面
             renderCards();
             renderTodos();
             notepadContentEl.value = '';
+            fetchWeather();         // 如果需要刷新天气
+            applyWidgetOrder();     // 如果需要刷新小部件顺序
             
             alert('所有数据已清空！');
         }
