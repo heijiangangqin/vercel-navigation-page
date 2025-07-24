@@ -24,20 +24,37 @@ class DataManager {
 
     async initialize() {
         if (this.isInitialized) return;
-        // 检查 session
+        // 1. 先读本地缓存，立即渲染
+        this.loadFromLocalStorage();
+        // 2. 检查 session
         this.isVerified = await this.checkSession();
+        // 3. 后台拉取 Redis 数据，若有变化则覆盖本地并刷新
         if (this.isVerified) {
-            await this.loadFromRedis();
-        } else {
-            // fallback: localStorage
-            this.loadFromLocalStorage();
+            this.refreshFromRedis();
         }
         this.isInitialized = true;
     }
 
+    async refreshFromRedis() {
+        try {
+            const resp = await fetch(`/api/redis.js?key=${this.dataKey}`);
+            if (!resp.ok) throw new Error('Redis unavailable');
+            const result = await resp.json();
+            if (result.result) {
+                const redisData = JSON.parse(result.result);
+                // 判断本地和云端数据是否一致
+                if (JSON.stringify(redisData) !== JSON.stringify(this.data)) {
+                    this.data = { ...this.data, ...redisData };
+                    this.saveToLocalStorage();
+                    // 用 Redis 覆盖本地，刷新页面以确保 UI 一致
+                    location.reload();
+                }
+            }
+        } catch {}
+    }
+
     async checkSession() {
         try {
-            // 尝试拉取数据，若未授权会 401
             const resp = await fetch(`/api/redis.js?key=${this.dataKey}`);
             if (resp.status === 401) return false;
             return true;
@@ -47,14 +64,13 @@ class DataManager {
     }
 
     async requestVerificationCode() {
-        // 真实项目应通过邮件/短信/其它方式发送
         const resp = await fetch('/api/redis.js', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'request_code' })
         });
         const data = await resp.json();
-        return data.code; // 仅演示，实际应隐藏
+        return data.code;
     }
 
     async verifyCode(code) {
@@ -66,7 +82,7 @@ class DataManager {
         const data = await resp.json();
         if (data.success) {
             this.isVerified = true;
-            await this.loadFromRedis();
+            await this.refreshFromRedis();
             return true;
         }
         return false;
@@ -79,7 +95,7 @@ class DataManager {
             const result = await resp.json();
             if (result.result) {
                 this.data = { ...this.data, ...JSON.parse(result.result) };
-                this.saveToLocalStorage(); // 同步一份本地 fallback
+                this.saveToLocalStorage();
             }
         } catch {
             this.loadFromLocalStorage();
@@ -97,7 +113,7 @@ class DataManager {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ key: this.dataKey, value: this.data })
             });
-            this.saveToLocalStorage(); // 同步一份本地 fallback
+            this.saveToLocalStorage();
         } catch {
             this.saveToLocalStorage();
         }
@@ -119,7 +135,6 @@ class DataManager {
         } catch {}
     }
 
-    // 其它 get/set 方法全部调用 saveToRedis
     getData(key) { return this.data[key]; }
     setData(key, value) { this.data[key] = value; this.saveToRedis(); }
     getCards() { return this.data.cards; }
