@@ -1043,12 +1043,11 @@ function initializeSettings() {
                 },
                 widgetVisibility: {
                     weather: true,
-                    calendar: true,
                     todo: true,
                     notepad: true
                 }
             };
-            
+            dataManager.saveToLocalStorage(); // 立即写入本地缓存
             // 重新渲染界面
             renderCards();
             renderTodos();
