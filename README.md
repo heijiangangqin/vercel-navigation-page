@@ -109,9 +109,9 @@ homepage/
 ├── script.js               # JavaScript逻辑文件
 ├── README.md               # 项目说明文档
 └── icons/
-    ├── favicon.svg         # 浏览器标签页图标（SVG格式）
-    ├── favicon.png         # 浏览器标签页图标（PNG格式）
-    ├── favicon.ico         # 浏览器标签页图标（ICO格式）
+├── favicon.svg         # 浏览器标签页图标（SVG格式）
+├── favicon.png         # 浏览器标签页图标（PNG格式）
+├── favicon.ico         # 浏览器标签页图标（ICO格式）
     └── default-icon.svg    # 默认卡片图标
 ```
 

@@ -228,10 +228,13 @@ class DataManager {
         try {
             const text = await file.text();
             const importedData = JSON.parse(text);
-            
-            // 合并数据
-            this.data = { ...this.data, ...importedData };
-            
+
+            // 完全覆盖数据（如果你想合并就用原来的写法）
+            this.data = importedData;
+
+            // 持久化保存
+            await this.saveToFile();
+
             console.log('数据导入成功');
             return true;
         } catch (error) {
