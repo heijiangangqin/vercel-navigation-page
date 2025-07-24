@@ -28,9 +28,9 @@ class DataManager {
         this.loadFromLocalStorage();
         // 2. 检查 session
         this.isVerified = await this.checkSession();
-        // 3. 后台拉取 Redis 数据，若有变化则覆盖本地并刷新
+        // 3. 后台拉取 Redis 数据，若有变化则覆盖本地并刷新（不 await，异步）
         if (this.isVerified) {
-            this.refreshFromRedis();
+            this.refreshFromRedis(); // 不 await，异步后台拉取
         }
         this.isInitialized = true;
     }
@@ -82,7 +82,7 @@ class DataManager {
         const data = await resp.json();
         if (data.success) {
             this.isVerified = true;
-            await this.refreshFromRedis();
+            this.refreshFromRedis(); // 不 await，异步后台拉取
             return true;
         }
         return false;
