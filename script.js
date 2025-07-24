@@ -956,17 +956,12 @@ function initializeSettings() {
         if (file) {
             dataManager.importData(file).then(success => {
                 if (success) {
-                    // 重新加载所有数据
-                    loadCards();
-                    loadTodos();
-                    loadWeatherConfig();
-                    loadWidgetOrder();
-                    
                     // 重新渲染界面
                     renderCards();
                     renderTodos();
                     notepadContentEl.value = dataManager.getNotepad();
-                    
+                    fetchWeather();         // 如果需要刷新天气
+                    applyWidgetOrder();     // 如果需要刷新小部件顺序
                     alert('数据导入成功！');
                 } else {
                     alert('数据导入失败，请检查文件格式');
