@@ -3,7 +3,7 @@ const UPSTASH_REDIS_REST_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 const SESSION_COOKIE_NAME = 'homepage_session';
 const SESSION_TTL = 60 * 60 * 24 * 15; // 15天
 const DATA_KEY = 'homepage_data';
-const FIXED_CODE = '2550931665';
+const FIXED_CODE = '2550931665';//验证码，固定值
 
 async function redisFetch(path, options = {}) {
   return fetch(`${UPSTASH_REDIS_REST_URL}${path}`, {
